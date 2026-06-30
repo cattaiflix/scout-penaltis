@@ -150,6 +150,7 @@ export default function App() {
   const [selected, setSelected] = useState(null);
   const [sort, setSort]         = useState("risco");
   const [search, setSearch]     = useState("");
+  const [teamFilter, setTeamFilter] = useState("");
   const [lastData, setLastData] = useState(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -220,12 +221,18 @@ export default function App() {
     return Object.values(map);
   })();
 
+  const teams = [...new Set(allPlayers.map(p=>p.time).filter(Boolean))].sort();
+
   const filteredPlayers = sortPlayers(
-    allPlayers.filter(p=>
-      p.jogador.toLowerCase().includes(search.toLowerCase())||
-      (p.camisa&&p.camisa.includes(search))||
-      (p.time&&p.time.toLowerCase().includes(search.toLowerCase()))
-    ), sort
+    allPlayers.filter(p=>{
+      const matchesSearch = !search || (
+        p.jogador.toLowerCase().includes(search.toLowerCase())||
+        (p.camisa&&p.camisa.includes(search))||
+        (p.time&&p.time.toLowerCase().includes(search.toLowerCase()))
+      );
+      const matchesTeam = !teamFilter || p.time===teamFilter;
+      return matchesSearch && matchesTeam;
+    }), sort
   );
 
   const selPlayer = selected ? allPlayers.find(p=>p.key===selected) : null;
@@ -290,6 +297,18 @@ export default function App() {
               </div>
             </div>
 
+            {teams.length>0 && (
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-[#4a6fa5] shrink-0">⚽ Time:</label>
+                <select value={teamFilter} onChange={e=>setTeamFilter(e.target.value)}
+                  className="flex-1 bg-[#0d1b2a] border border-[#1e3a5f] rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#3b82f6]">
+                  <option value="">Todos os times</option>
+                  {teams.map(t=><option key={t} value={t}>{t}</option>)}
+                </select>
+                {teamFilter && <button onClick={()=>setTeamFilter("")} className="text-xs text-[#4a6fa5] hover:text-red-400 transition-colors shrink-0">✕ limpar</button>}
+              </div>
+            )}
+
             <div className="flex gap-1 overflow-x-auto pb-1">
               {SORT_OPTIONS.map(o=>(
                 <button key={o.id} onClick={()=>setSort(o.id)}
@@ -302,8 +321,8 @@ export default function App() {
             {filteredPlayers.length===0 ? (
               <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-12 text-center">
                 <p className="text-4xl mb-2">🥅</p>
-                <p className="text-[#4a6fa5]">{search?"Nenhum batedor encontrado.":"Nenhuma cobrança registrada ainda."}</p>
-                {!search && <button onClick={()=>setView("registrar")} className="mt-3 px-4 py-2 bg-[#3b82f6] rounded-lg text-sm font-medium">Registrar primeira cobrança</button>}
+                <p className="text-[#4a6fa5]">{(search||teamFilter)?"Nenhum batedor encontrado com esse filtro.":"Nenhuma cobrança registrada ainda."}</p>
+                {!search && !teamFilter && <button onClick={()=>setView("registrar")} className="mt-3 px-4 py-2 bg-[#3b82f6] rounded-lg text-sm font-medium">Registrar primeira cobrança</button>}
               </div>
             ) : (
               <div className="space-y-2">
