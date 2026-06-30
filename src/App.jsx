@@ -92,7 +92,7 @@ function Heatmap({ kicks, size="md" }) {
   const txtSz = size==="lg"?"text-base":size==="sm"?"text-[9px]":"text-xs";
   const subSz = size==="lg"?"text-xs":"text-[8px]";
   return (
-    <div className="border-2 border-[#1e3a5f] rounded overflow-hidden">
+    <div className="border-2 border-[#1e3a5f] rounded overflow-hidden print-card">
       <div className="grid grid-cols-3">
         {ZONES.map(z=>{
           const inZ = kicks.filter(k=>k.zona===z.id);
@@ -100,17 +100,18 @@ function Heatmap({ kicks, size="md" }) {
           const d=inZ.filter(k=>k.resultado==="defendido").length;
           const f=inZ.filter(k=>k.resultado==="fora").length;
           const n=inZ.length, mx=Math.max(g,d,f,0);
-          let bg="bg-[#0a1628]";
-          if(n>0) bg=(mx===g&&g>0)?"bg-[#22c55e]":(mx===d&&d>0)?"bg-[#f59e0b]":"bg-[#ef4444]";
+          let bg="heat-0 bg-[#0a1628]";
+          if(n>0) bg=(mx===g&&g>0)?"heat-lo bg-[#22c55e]":(mx===d&&d>0)?"heat-md bg-[#f59e0b]":"heat-hi bg-[#ef4444]";
+          const txtCls = n>0 ? "hm-text" : "hm-text-muted";
           return (
             <div key={z.id} className={`${bg} ${cellW} border border-[#1e3a5f] flex flex-col items-center justify-center`}>
-              {n>0 && <span className={`${txtSz} font-black text-white leading-none`}>{n}</span>}
-              {n>0 && size!=="sm" && <span className={`${subSz} text-white/80 leading-none`}>{g}G {d}D {f}F</span>}
+              {n>0 && <span className={`${txtCls} ${txtSz} font-black text-white leading-none`}>{n}</span>}
+              {n>0 && size!=="sm" && <span className={`${txtCls} ${subSz} text-white/80 leading-none`}>{g}G {d}D {f}F</span>}
             </div>
           );
         })}
       </div>
-      <div className="bg-[#1e3a5f] py-0.5 text-center">
+      <div className="heat-bar bg-[#1e3a5f] py-0.5 text-center">
         <span className="text-[9px] text-[#4a6fa5]">🟢 Gol &nbsp;🟡 Defendido &nbsp;🔴 Fora</span>
       </div>
     </div>
@@ -261,8 +262,64 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#060e1a] text-white font-sans">
+      <style>{`
+        @media print {
+          html {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+
+          .no-print { display: none !important; }
+
+          body, html {
+            background: #ffffff !important;
+            color: #111827 !important;
+          }
+          body *:not(.heat-0):not(.heat-lo):not(.heat-md):not(.heat-hi):not(.heat-bar):not(.hm-text):not(.hm-text-muted) {
+            background-color: #ffffff !important;
+          }
+          body *:not(.hm-text) {
+            color: #111827 !important;
+            box-shadow: none !important;
+            border-color: #d1d5db !important;
+          }
+
+          .print-card {
+            border: 1.5px solid #9ca3af !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 8pt !important;
+          }
+          .print-inner {
+            border: 1px solid #d1d5db !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .print-inner:not(.heat-bar),
+          .print-inner *:not(.heat-0):not(.heat-lo):not(.heat-md):not(.heat-hi):not(.heat-bar):not(.hm-text):not(.hm-text-muted) {
+            background-color: #f3f4f6 !important;
+          }
+
+          .print-score { color: #1d4ed8 !important; }
+          .res-green  { color: #15803d !important; }
+          .res-red    { color: #b91c1c !important; }
+          .res-yellow { color: #92400e !important; }
+
+          .print-card .heat-lo { background-color: #16a34a !important; }
+          .print-card .heat-md { background-color: #d97706 !important; }
+          .print-card .heat-hi { background-color: #dc2626 !important; }
+          .print-card .heat-0  { background-color: #e5e7eb !important; }
+          .print-card .heat-bar { background-color: #f3f4f6 !important; }
+
+          .hm-text { color: #ffffff !important; background-color: transparent !important; }
+          .hm-text-muted { color: #6b7280 !important; background-color: transparent !important; }
+
+          @page { size: A4; margin: 1.2cm 1cm; }
+        }
+      `}</style>
+
       {/* NAV */}
-      <div className="sticky top-0 z-50 bg-[#060e1a] border-b border-[#1e3a5f] px-4 py-3 flex items-center justify-between">
+      <div className="no-print sticky top-0 z-50 bg-[#060e1a] border-b border-[#1e3a5f] px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-[#3b82f6] rounded-lg flex items-center justify-center font-bold">🥅</div>
           <div>
@@ -380,9 +437,12 @@ export default function App() {
           const rodadas = [...new Set(selPlayer.kicks.map(k=>k.rodada).filter(Boolean))].sort();
           return (
             <>
-              <button onClick={()=>setView("goleiro")} className="text-[#7fb3f5] hover:text-white text-sm transition-colors">← Voltar</button>
+              <div className="no-print flex items-center justify-between">
+                <button onClick={()=>setView("goleiro")} className="text-[#7fb3f5] hover:text-white text-sm transition-colors">← Voltar</button>
+                <button onClick={()=>window.print()} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium text-white transition-colors">🖨 Salvar PDF</button>
+              </div>
 
-              <div className="bg-[#0a1628] border-2 border-[#3b82f6] rounded-xl p-5">
+              <div className="print-card bg-[#0a1628] border-2 border-[#3b82f6] rounded-xl p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <h2 className="text-2xl font-black">{selPlayer.jogador}</h2>
@@ -410,7 +470,7 @@ export default function App() {
                     {v:s.gols,      l:"Gols",       c:"text-green-400"},
                     {v:s.defs+s.fora,l:"Erros",     c:"text-red-400"},
                   ].map(({v,l,c})=>(
-                    <div key={l} className="bg-[#060e1a] rounded-lg p-3 text-center border border-[#1e3a5f]">
+                    <div key={l} className="print-inner bg-[#060e1a] rounded-lg p-3 text-center border border-[#1e3a5f]">
                       <p className={`text-xl font-black ${c}`}>{v}</p>
                       <p className="text-[10px] text-[#4a6fa5] mt-0.5">{l}</p>
                     </div>
@@ -419,7 +479,7 @@ export default function App() {
 
                 {/* Alerta goleiro */}
                 {s.topZone && (
-                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+                  <div className="print-inner bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
                     <p className="text-xs font-bold text-red-400 uppercase mb-1">⚠️ Atenção Goleiro</p>
                     <p className="text-sm text-white leading-relaxed">
                       Bate com mais frequência em <strong className="text-yellow-400">{ZONE_LABELS[s.topZone[0]]}</strong>
@@ -443,7 +503,7 @@ export default function App() {
                     const g=inZ.filter(k=>k.resultado==="gol").length;
                     const pct=Math.round(g/inZ.length*100);
                     return (
-                      <div key={z.id} className="bg-[#0d1b2a] rounded p-2 border border-[#1e3a5f] text-center">
+                      <div key={z.id} className="print-inner bg-[#0d1b2a] rounded p-2 border border-[#1e3a5f] text-center">
                         <p className="text-[10px] text-[#4a6fa5] mb-0.5">{ZONE_LABELS[z.id]}</p>
                         <p className="text-sm font-bold">{inZ.length}x</p>
                         <p className="text-[10px] text-green-400">{pct}% conv</p>
@@ -454,7 +514,7 @@ export default function App() {
               </div>
 
               {/* Histórico */}
-              <div className="bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-4">
+              <div className="print-card bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-4">
                 <p className="text-xs font-bold text-[#7fb3f5] uppercase mb-2">Histórico completo</p>
                 <div className="space-y-1">
                   {selPlayer.kicks.slice().sort((a,b)=>(b.data||"").localeCompare(a.data||"")).map(k=>(
@@ -467,7 +527,7 @@ export default function App() {
                       <span className={`ml-auto text-xs font-semibold shrink-0 ${k.resultado==="gol"?"text-green-400":k.resultado==="defendido"?"text-orange-400":"text-red-400"}`}>
                         {k.resultado==="gol"?"✅ Gol":k.resultado==="defendido"?"🛑 Def":"❌ Fora"}
                       </span>
-                      <button onClick={()=>removeKick(k.id)} className="text-[#4a6fa5] hover:text-red-400 text-xs shrink-0 ml-1">✕</button>
+                      <button onClick={()=>removeKick(k.id)} className="no-print text-[#4a6fa5] hover:text-red-400 text-xs shrink-0 ml-1">✕</button>
                     </div>
                   ))}
                 </div>
