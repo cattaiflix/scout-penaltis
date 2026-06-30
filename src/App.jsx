@@ -331,7 +331,7 @@ export default function App() {
           {syncMsg && <span className="text-xs text-green-400 mr-1">{syncMsg}</span>}
           <button onClick={refresh} title="Atualizar" className="p-1.5 text-[#4a6fa5] hover:text-white transition-colors">🔄</button>
           <button onClick={()=>{setView("goleiro");setSelected(null);}}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view==="goleiro"||view==="detalhe"?"bg-[#3b82f6] text-white":"text-[#4a6fa5] hover:text-white"}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${view==="goleiro"||view==="detalhe"||view==="relatorio"?"bg-[#3b82f6] text-white":"text-[#4a6fa5] hover:text-white"}`}>
             🧤 Goleiro
           </button>
           <button onClick={()=>setView("registrar")}
@@ -364,6 +364,13 @@ export default function App() {
                 </select>
                 {teamFilter && <button onClick={()=>setTeamFilter("")} className="text-xs text-[#4a6fa5] hover:text-red-400 transition-colors shrink-0">✕ limpar</button>}
               </div>
+            )}
+
+            {teamFilter && filteredPlayers.length>0 && (
+              <button onClick={()=>setView("relatorio")}
+                className="w-full py-2.5 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-bold text-white transition-colors flex items-center justify-center gap-2">
+                🖨 Gerar Relatório de {filteredPlayers.length} Batedor{filteredPlayers.length!==1?"es":""} — {teamFilter}
+              </button>
             )}
 
             <div className="flex gap-1 overflow-x-auto pb-1">
@@ -428,6 +435,98 @@ export default function App() {
                 })}
               </div>
             )}
+          </>
+        )}
+
+        {/* ══ RELATÓRIO DO TIME (impressão em lote) ═══════════════════════ */}
+        {view==="relatorio" && (
+          <>
+            <div className="no-print flex items-center justify-between">
+              <button onClick={()=>setView("goleiro")} className="text-[#7fb3f5] hover:text-white text-sm transition-colors">← Voltar</button>
+              <button onClick={()=>window.print()} className="px-3 py-1.5 bg-green-600 hover:bg-green-500 rounded-lg text-sm font-medium text-white transition-colors">🖨 Salvar PDF</button>
+            </div>
+
+            <div className="print-card bg-[#0a1628] border border-[#1e3a5f] rounded-xl p-4">
+              <h2 className="text-xl font-black">🥅 Scout de Pênaltis</h2>
+              <p className="text-[#7fb3f5] text-sm mt-1">Time: <strong className="text-white">{teamFilter || "Todos"}</strong></p>
+              <p className="text-xs text-[#4a6fa5] mt-1">{filteredPlayers.length} batedor{filteredPlayers.length!==1?"es":""} · Gerado em {new Date().toLocaleDateString("pt-BR")}</p>
+            </div>
+
+            {sortPlayers(filteredPlayers, sort).map((p, idx)=>{
+              const s = calcStats(p.kicks);
+              const rodadas = [...new Set(p.kicks.map(k=>k.rodada).filter(Boolean))].sort();
+              return (
+                <div key={p.key} className="print-card bg-[#0a1628] border-2 border-[#3b82f6] rounded-xl p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-full bg-[#1e3a5f] text-[#7fb3f5] flex items-center justify-center text-sm font-black shrink-0">{idx+1}</span>
+                        <h2 className="text-xl font-black">{p.jogador}</h2>
+                      </div>
+                      <div className="flex items-center gap-2 mt-1 flex-wrap ml-9">
+                        {p.camisa && <span className="text-[#4a6fa5]">#{p.camisa}</span>}
+                        {p.time && <span className="text-sm bg-[#1e3a5f] text-[#7fb3f5] px-2 py-0.5 rounded-full">{p.time}</span>}
+                        <DangerBadge conv={s.conv} />
+                        {rodadas.length>0 && <span className="text-xs text-[#4a6fa5]">Rodadas: {rodadas.join(", ")}</span>}
+                      </div>
+                    </div>
+                    {s.pePref && (
+                      <div className="print-inner bg-[#1e3a5f] rounded-xl p-3 text-center shrink-0">
+                        <p className="text-2xl">🦶</p>
+                        <p className="text-xs font-bold text-white mt-0.5">{s.pePref}</p>
+                        <p className="text-[10px] text-[#4a6fa5]">Pé dom.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 mb-4">
+                    {[
+                      {v:`${s.conv}%`,l:"Conversão",  c:"text-white"},
+                      {v:s.total,     l:"Cobranças",  c:"text-[#7fb3f5]"},
+                      {v:s.gols,      l:"Gols",       c:"text-green-400"},
+                      {v:s.defs+s.fora,l:"Erros",     c:"text-red-400"},
+                    ].map(({v,l,c})=>(
+                      <div key={l} className="print-inner bg-[#060e1a] rounded-lg p-3 text-center border border-[#1e3a5f]">
+                        <p className={`text-xl font-black ${c}`}>{v}</p>
+                        <p className="text-[10px] text-[#4a6fa5] mt-0.5">{l}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {s.topZone && (
+                    <div className="print-inner bg-red-500/10 border border-red-500/30 rounded-lg p-3 mb-4">
+                      <p className="text-xs font-bold text-red-400 uppercase mb-1">⚠️ Atenção Goleiro</p>
+                      <p className="text-sm text-white leading-relaxed">
+                        Bate com mais frequência em <strong className="text-yellow-400">{ZONE_LABELS[s.topZone[0]]}</strong>
+                        {s.topGolZone && <> · Maior conversão em <strong className="text-green-400">{ZONE_LABELS[s.topGolZone[0]]}</strong></>}
+                        {s.pePref && <span className="text-[#7fb3f5]"> · Pé {s.pePref}</span>}
+                      </p>
+                    </div>
+                  )}
+
+                  <p className="text-xs font-bold text-[#7fb3f5] uppercase mb-2">🎯 Mapa de Cobranças</p>
+                  <div className="flex justify-center mb-3">
+                    <Heatmap kicks={p.kicks} size="lg" />
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-1">
+                    {ZONES.map(z=>{
+                      const inZ = p.kicks.filter(k=>k.zona===z.id);
+                      if(inZ.length===0) return null;
+                      const g=inZ.filter(k=>k.resultado==="gol").length;
+                      const pct=Math.round(g/inZ.length*100);
+                      return (
+                        <div key={z.id} className="print-inner bg-[#0d1b2a] rounded p-2 border border-[#1e3a5f] text-center">
+                          <p className="text-[10px] text-[#4a6fa5] mb-0.5">{ZONE_LABELS[z.id]}</p>
+                          <p className="text-sm font-bold">{inZ.length}x</p>
+                          <p className="text-[10px] text-green-400">{pct}% conv</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </>
         )}
 
