@@ -334,7 +334,7 @@ export default function App() {
                           <div className="flex gap-1 flex-wrap">
                             {s.topZone && (
                               <span className="text-xs bg-[#060e1a] border border-[#1e3a5f] px-2 py-0.5 rounded text-[#7fb3f5]">
-                                🎯 <strong className="text-white">{ZONE_LABELS[s.topZone[0]]}</strong> ({s.topZone[1]}x)
+                                🎯 <strong className="text-white">{ZONE_LABELS[s.topZone[0]]}</strong> ({s.topZone[1].total}x)
                               </span>
                             )}
                             {s.topGolZone && s.topGolZone[0]!==s.topZone?.[0] && (
